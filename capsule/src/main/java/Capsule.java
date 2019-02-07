@@ -359,7 +359,6 @@ public class Capsule implements Runnable, InvocationHandler {
 
     @SuppressWarnings("unchecked")
     public static void disableAccessWarnings() {
-        System.out.println("~~~~~~~~~~~ Disabling warnings.....");
         try {
             Class unsafeClass = Class.forName("sun.misc.Unsafe");
             Field field = unsafeClass.getDeclaredField("theUnsafe");
