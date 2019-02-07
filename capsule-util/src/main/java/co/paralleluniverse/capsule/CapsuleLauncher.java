@@ -12,6 +12,7 @@ import static co.paralleluniverse.common.Exceptions.rethrow;
 import co.paralleluniverse.common.JarClassLoader;
 import co.paralleluniverse.common.JarInputStream;
 import java.io.IOException;
+import sun.misc.Unsafe;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -45,6 +46,27 @@ public final class CapsuleLauncher {
         this.jarFile = jarFile;
         this.capsuleClass = loadCapsuleClass(jarFile);
         setProperties(null);
+    }
+
+    static {
+        disableWarning();
+    }
+
+    private static void disableWarning() {
+        try {
+            Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
+            theUnsafe.setAccessible(true);
+            Unsafe u = (Unsafe) theUnsafe.get(null);
+
+            // List<String> clazzes = Arrays.asList("com.sun.jmx.mbeanserver.JmxMBeanServer.mbsInterceptor",  "com.fasterxml.jackson.module.afterburner.util.MyClassLoader");
+
+            Class cls = Class.forName("com.sun.jmx.mbeanserver.JmxMBeanServer");
+            Field logger = cls.getDeclaredField("mbsInterceptor");
+            u.putObjectVolatile(cls, u.staticFieldOffset(logger), null);
+
+        } catch (Exception e) {
+            // ignore
+        }
     }
 
     /**
