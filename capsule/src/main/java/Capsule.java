@@ -90,6 +90,9 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Field;
+
 import static java.util.Collections.*;
 import static java.util.Arrays.asList;
 
@@ -353,6 +356,30 @@ public class Capsule implements Runnable, InvocationHandler {
     private static Path CACHE_DIR;
     private static Capsule CAPSULE;
     private static boolean AGENT;
+
+    @SuppressWarnings("unchecked")
+    public static void disableAccessWarnings() {
+        System.out.println("~~~~~~~~~~~ Disabling warnings.....");
+        try {
+            Class unsafeClass = Class.forName("sun.misc.Unsafe");
+            Field field = unsafeClass.getDeclaredField("theUnsafe");
+            field.setAccessible(true);
+            Object unsafe = field.get(null);
+
+            Method putObjectVolatile = unsafeClass.getDeclaredMethod("putObjectVolatile", Object.class, long.class, Object.class);
+            Method staticFieldOffset = unsafeClass.getDeclaredMethod("staticFieldOffset", Field.class);
+
+            Class loggerClass = Class.forName("jdk.internal.module.IllegalAccessLogger");
+            Field loggerField = loggerClass.getDeclaredField("logger");
+            Long offset = (Long) staticFieldOffset.invoke(unsafe, loggerField);
+            putObjectVolatile.invoke(unsafe, loggerClass, offset, null);
+        } catch (Exception ignored) {
+        }
+    }
+
+    static {
+        disableAccessWarnings();
+    }
 
     final static Capsule myCapsule(List<String> args) {
         if (CAPSULE == null) {
