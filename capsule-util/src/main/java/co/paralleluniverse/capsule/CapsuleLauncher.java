@@ -49,25 +49,29 @@ public final class CapsuleLauncher {
     }
 
     static {
-        disableWarning();
+        disableAccessWarnings();
     }
 
-    private static void disableWarning() {
+    @SuppressWarnings("unchecked")
+    public static void disableAccessWarnings() {
+        System.out.println("~~~~~~~~~~~ Disabling warnings.....");
         try {
-            Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-            theUnsafe.setAccessible(true);
-            Unsafe u = (Unsafe) theUnsafe.get(null);
+            Class unsafeClass = Class.forName("sun.misc.Unsafe");
+            Field field = unsafeClass.getDeclaredField("theUnsafe");
+            field.setAccessible(true);
+            Object unsafe = field.get(null);
 
-            // List<String> clazzes = Arrays.asList("com.sun.jmx.mbeanserver.JmxMBeanServer.mbsInterceptor",  "com.fasterxml.jackson.module.afterburner.util.MyClassLoader");
+            Method putObjectVolatile = unsafeClass.getDeclaredMethod("putObjectVolatile", Object.class, long.class, Object.class);
+            Method staticFieldOffset = unsafeClass.getDeclaredMethod("staticFieldOffset", Field.class);
 
-            Class cls = Class.forName("com.sun.jmx.mbeanserver.JmxMBeanServer");
-            Field logger = cls.getDeclaredField("mbsInterceptor");
-            u.putObjectVolatile(cls, u.staticFieldOffset(logger), null);
-
-        } catch (Exception e) {
-            // ignore
+            Class loggerClass = Class.forName("jdk.internal.module.IllegalAccessLogger");
+            Field loggerField = loggerClass.getDeclaredField("logger");
+            Long offset = (Long) staticFieldOffset.invoke(unsafe, loggerField);
+            putObjectVolatile.invoke(unsafe, loggerClass, offset, null);
+        } catch (Exception ignored) {
         }
     }
+
 
     /**
      * Sets the Java homes that will be used by the capsules created by {@code newCapsule}.
